@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Card from "./components/Card";
+import Loader from "./components/Loader";
 
 export default function App() {
   const [articles, setArticles] = useState([]);
@@ -37,7 +38,7 @@ export default function App() {
             const description = item.querySelector("description")?.textContent || "";
             const enclosure = item.querySelector("enclosure")?.getAttribute("url") || null;
             const media = item.querySelector("media\\:content")?.getAttribute("url") || null;
-            const image = enclosure || media || null;
+            const image = enclosure || media || "/solocagliari.png";
 
             return { title, link, pubDate, description, image, source: feed.name };
           });
@@ -123,12 +124,9 @@ export default function App() {
                 <section aria-labelledby="recenti-title">
                   <h2 id="recenti-title" className="sr-only">Recenti</h2>
 
+                  {/* Loader */}
                   {loading ? (
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {[...Array(6)].map((_, i) => (
-                        <div key={i} className="h-40 rounded-xl bg-gray-200 animate-pulse" />
-                      ))}
-                    </div>
+                    <Loader label="Carico le notizie…" />
                   ) : articles.length === 0 ? (
                     <p className="text-center text-gray-600">Nessuna notizia trovata.</p>
                   ) : (
@@ -145,7 +143,7 @@ export default function App() {
                     <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
                       <p className="text-gray-600">Nessuna notizia importante ancora.</p>
                       <p className="text-sm text-gray-500 mt-1">
-                        Più avanti aggiungeremo il tasto ⭐ per salvare le notizie qui.
+                        Più avanti aggiungeremo il tasto IMPORTANTE per salvare le notizie qui.
                       </p>
                     </div>
                   ) : (

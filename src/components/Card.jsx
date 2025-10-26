@@ -21,7 +21,7 @@ const Card = ({ articles }) => {
 
           <div className="p-4">
             <div className="text-xs text-gray-500 mb-2">
-              🗞️ {item.source} •{" "}
+              <span className='inline-block text-[11px] font-semibold uppercase tracking-wide text-gray-700 bg-gray-100 px-2 py-0.5 rounded'>Fonte:</span>  {item.source} •{" "}
               {item.pubDate
                 ? new Date(item.pubDate).toLocaleString("it-IT")
                 : "Data sconosciuta"}
