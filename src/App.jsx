@@ -1,13 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Card from "./components/Card";
 import Loader from "./components/Loader";
+import { useCagliariAggregator } from "./hooks/useCagliariAggregator";
 
 export default function App() {
-  const [articles, setArticles] = useState([]);
   const [important, setImportant] = useState([]); // per adesso vuoto (futura richiesta al DB)
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("recenti"); // "recenti" | "importanti"
 
   // tutte le mie fonti da rss pubbliche
@@ -17,61 +16,17 @@ export default function App() {
     { name: "CagliariNews24", url: "https://www.cagliarinews24.com/feed/" },
   ];
 
-  useEffect(() => {
-    async function fetchAllFeeds() {
-      try {
-        const allItems = [];
-
-        for (const feed of FEEDS) {
-          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(feed.url)}`;
-          const res = await fetch(proxyUrl);
-          const xmlText = await res.text();
-
-          const parser = new DOMParser();
-          const xml = parser.parseFromString(xmlText, "text/xml");
-          const items = xml.querySelectorAll("item");
-
-          const parsedArticles = Array.from(items).map((item) => {
-            const title = item.querySelector("title")?.textContent || "";
-            const link = item.querySelector("link")?.textContent || "";
-            const pubDate = item.querySelector("pubDate")?.textContent || "";
-            const description = item.querySelector("description")?.textContent || "";
-            const enclosure = item.querySelector("enclosure")?.getAttribute("url") || null;
-            const media = item.querySelector("media\\:content")?.getAttribute("url") || null;
-            const image = enclosure || media || "/solocagliari.png";
-
-            return { title, link, pubDate, description, image, source: feed.name };
-          });
-
-          allItems.push(...parsedArticles);
-        }
-
-        let sorted = allItems
-          .filter((a) => a.title && a.link)
-          .sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime());
-
-        const seen = new Set();
-        sorted = sorted.filter((a) => {
-          const key = (a.link || a.title).trim();
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-
-        setArticles(sorted.slice(0, 30));
-      } catch (err) {
-        console.error("Errore nel caricamento dei feed:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchAllFeeds();
-  }, []);
+  // Hook aggregatore (Strada A)
+  const { articles, loading, error } = useCagliariAggregator(FEEDS, {
+    includeUnioneSarda: true, // attiva/disattiva L'Unione Sarda
+    maxUSFeeds: 30,           // quanti feed dall’indice US analizzare
+    limit: 30,                // quanti articoli finali mostrare
+  });
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
+
       {/* Barra tab minimal bianco/nero (orizzontale anche su mobile) */}
       <div className="bg-white border-b">
         <div className="max-w-5xl mx-auto px-4">
@@ -81,7 +36,7 @@ export default function App() {
             <button
               onClick={() => setActiveTab("recenti")}
               className={`flex-1 text-center px-4 py-2 font-semibold rounded-t-lg transition
-          ${activeTab === "recenti"
+                ${activeTab === "recenti"
                   ? "bg-white text-black border border-gray-300 border-b-0 shadow-sm"
                   : "text-gray-600 hover:text-black bg-gray-50"
                 }`}
@@ -95,7 +50,7 @@ export default function App() {
             <button
               onClick={() => setActiveTab("importanti")}
               className={`flex-1 text-center px-4 py-2 font-semibold rounded-t-lg transition
-          ${activeTab === "importanti"
+                ${activeTab === "importanti"
                   ? "bg-white text-black border border-gray-300 border-b-0 shadow-sm"
                   : "text-gray-600 hover:text-black bg-gray-50"
                 }`}
@@ -124,7 +79,14 @@ export default function App() {
                 <section aria-labelledby="recenti-title">
                   <h2 id="recenti-title" className="sr-only">Recenti</h2>
 
-                  {/* Loader */}
+                  {/* Error state (facoltativo) */}
+                  {error && (
+                    <p className="mb-3 text-sm text-red-600">
+                      Errore nel caricamento delle notizie. Riprova più tardi.
+                    </p>
+                  )}
+
+                  {/* Loader / Empty / List */}
                   {loading ? (
                     <Loader label="Carico le notizie…" />
                   ) : articles.length === 0 ? (
@@ -155,7 +117,6 @@ export default function App() {
           </div>
         </div>
       </main>
-
 
       <Footer />
     </div>
