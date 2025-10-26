@@ -5,8 +5,11 @@ import Card from "./components/Card";
 
 export default function App() {
   const [articles, setArticles] = useState([]);
+  const [important, setImportant] = useState([]); // per adesso vuoto (futura richiesta al DB)
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("recenti"); // "recenti" | "importanti"
 
+  // tutte le mie fonti da rss pubbliche
   const FEEDS = [
     { name: "Calcio Casteddu", url: "https://www.calciocasteddu.it/feed/" },
     { name: "TuttoCagliari", url: "https://www.tuttocagliari.net/rss" },
@@ -32,8 +35,6 @@ export default function App() {
             const link = item.querySelector("link")?.textContent || "";
             const pubDate = item.querySelector("pubDate")?.textContent || "";
             const description = item.querySelector("description")?.textContent || "";
-
-            // tenta immagini base da enclosure/media:content
             const enclosure = item.querySelector("enclosure")?.getAttribute("url") || null;
             const media = item.querySelector("media\\:content")?.getAttribute("url") || null;
             const image = enclosure || media || null;
@@ -44,21 +45,18 @@ export default function App() {
           allItems.push(...parsedArticles);
         }
 
-        // ordina per data decrescente
         let sorted = allItems
-          .filter(a => a.title && a.link)
+          .filter((a) => a.title && a.link)
           .sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime());
 
-        // dedup per link
         const seen = new Set();
-        sorted = sorted.filter(a => {
+        sorted = sorted.filter((a) => {
           const key = (a.link || a.title).trim();
           if (seen.has(key)) return false;
           seen.add(key);
           return true;
         });
 
-        // limita a 30 articoli
         setArticles(sorted.slice(0, 30));
       } catch (err) {
         console.error("Errore nel caricamento dei feed:", err);
@@ -73,26 +71,93 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
+      {/* Barra tab minimal bianco/nero (orizzontale anche su mobile) */}
+      <div className="bg-white border-b">
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="flex items-end gap-2 pt-3">
+
+            {/* Recenti */}
+            <button
+              onClick={() => setActiveTab("recenti")}
+              className={`flex-1 text-center px-4 py-2 font-semibold rounded-t-lg transition
+          ${activeTab === "recenti"
+                  ? "bg-white text-black border border-gray-300 border-b-0 shadow-sm"
+                  : "text-gray-600 hover:text-black bg-gray-50"
+                }`}
+              aria-selected={activeTab === "recenti"}
+              role="tab"
+            >
+              Recenti
+            </button>
+
+            {/* Importanti */}
+            <button
+              onClick={() => setActiveTab("importanti")}
+              className={`flex-1 text-center px-4 py-2 font-semibold rounded-t-lg transition
+          ${activeTab === "importanti"
+                  ? "bg-white text-black border border-gray-300 border-b-0 shadow-sm"
+                  : "text-gray-600 hover:text-black bg-gray-50"
+                }`}
+              aria-selected={activeTab === "importanti"}
+              role="tab"
+            >
+              Importanti
+            </button>
+
+            {/* Contatore a destra */}
+            <span className="hidden sm:block ml-auto text-xs sm:text-sm text-gray-500 pb-2">
+              {activeTab === "recenti"
+                ? (loading ? "Caricamento…" : `${articles.length} articoli`)
+                : `${important.length} salvate`}
+            </span>
+          </div>
+        </div>
+      </div>
 
       <main className="flex-1">
+        {/* Box contenuti “attaccato” alla linguetta attiva */}
         <div className="max-w-5xl mx-auto px-4 py-6">
-          {loading && (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-40 rounded-xl bg-gray-200 animate-pulse" />
-              ))}
+          <div className="rounded-b-lg rounded-t-lg border border-gray-300 shadow-sm">
+            <div className="p-4 sm:p-6">
+              {activeTab === "recenti" && (
+                <section aria-labelledby="recenti-title">
+                  <h2 id="recenti-title" className="sr-only">Recenti</h2>
+
+                  {loading ? (
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {[...Array(6)].map((_, i) => (
+                        <div key={i} className="h-40 rounded-xl bg-gray-200 animate-pulse" />
+                      ))}
+                    </div>
+                  ) : articles.length === 0 ? (
+                    <p className="text-center text-gray-600">Nessuna notizia trovata.</p>
+                  ) : (
+                    <Card articles={articles} />
+                  )}
+                </section>
+              )}
+
+              {activeTab === "importanti" && (
+                <section aria-labelledby="importanti-title">
+                  <h2 id="importanti-title" className="sr-only">Importanti</h2>
+
+                  {important.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
+                      <p className="text-gray-600">Nessuna notizia importante ancora.</p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Più avanti aggiungeremo il tasto ⭐ per salvare le notizie qui.
+                      </p>
+                    </div>
+                  ) : (
+                    <Card articles={important} />
+                  )}
+                </section>
+              )}
             </div>
-          )}
-
-          {!loading && articles.length === 0 && (
-            <p className="text-center text-gray-600">Nessuna notizia trovata.</p>
-          )}
-
-          <Card articles={articles} />
-
-
+          </div>
         </div>
       </main>
+
 
       <Footer />
     </div>
